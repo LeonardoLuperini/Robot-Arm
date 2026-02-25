@@ -1,0 +1,16 @@
+.{
+    .name = .hello_triangle,
+    .version = "0.15.2",
+    .dependencies = .{
+        .zglfw = .{
+            .url = "git+https://github.com/zig-gamedev/zglfw#1b008a0224def3e35a6affb1e7d77dbe36643de2",
+            .hash = "zglfw-0.10.0-dev-zgVDNES4IQAAXAcsFiHfmadlpDCHhF2cUqWxBGIViyU6",
+        },
+        .zopengl = .{
+            .url = "git+https://github.com/zig-gamedev/zopengl#e3f8563d47204bde27c5fd13f5cc63dffccdc91a",
+            .hash = "zopengl-0.6.0-dev-5-tnz7OjDgCMUH3dLn6zVzohxKV-FhrXXh13-HZSl2Ul",
+        },
+    },
+    .paths = .{""},
+    .fingerprint = 0x3dc7c7574127fdd3,
+}
