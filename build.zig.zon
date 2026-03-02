@@ -10,6 +10,10 @@
             .url = "git+https://github.com/zig-gamedev/zopengl#e3f8563d47204bde27c5fd13f5cc63dffccdc91a",
             .hash = "zopengl-0.6.0-dev-5-tnz7OjDgCMUH3dLn6zVzohxKV-FhrXXh13-HZSl2Ul",
         },
+        .zalgebra = .{
+            .url = "git+https://github.com/kooparse/zalgebra#fe19b7816f03d86d56d4fa62f943664edf5d367f",
+            .hash = "zalgebra-0.0.0-aaiVSrp2AQBLjd3lvhR0ILaVDHeqOpwNFCp0ZJHj0xhk",
+        },
     },
     .paths = .{""},
     .fingerprint = 0x3dc7c7574127fdd3,

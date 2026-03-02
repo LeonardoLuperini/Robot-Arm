@@ -20,6 +20,9 @@ pub fn build(b: *std.Build) void {
     const zopengl = b.dependency("zopengl", .{});
     exe.root_module.addImport("zopengl", zopengl.module("root"));
 
+    const zalgebra = b.dependency("zalgebra", .{});
+    exe.root_module.addImport("zalgebra", zalgebra.module("zalgebra"));
+
     exe.linkSystemLibrary("glfw");
     exe.linkSystemLibrary("GL");
     exe.linkSystemLibrary("c");

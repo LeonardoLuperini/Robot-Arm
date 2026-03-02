@@ -1,10 +1,16 @@
 const std = @import("std");
 const glfw = @import("zglfw");
 const zopengl = @import("zopengl");
+const za = @import("zalgebra");
 
 const gl = zopengl.bindings;
 const uint = gl.Uint;
 const int = gl.Int;
+const Mat4 = za.Mat4;
+const Vec3 = za.Vec3;
+const Vec4 = za.Vec4;
+
+
 const gl_version_major = 4;
 const gl_version_minor = 1;
 const sugg_width = 640;
@@ -19,23 +25,50 @@ const Rgb = struct {
 };
 
 const Cube = struct {
-    x: f32 = 0,
-    y: f32 = 0,
-    z: f32 = 0,
-    size: f32,
-    color: Rgb,
+    pos: Vec3 = Vec3.set(0),
+    size: f32 = 1,
+    color: Rgb = .{0, 0, 0},
 };
 
 const RenderableCube = struct {
-    const va: uint;
+    va: uint = undefined,
+    vert_pos: [8]Vec4 = undefined,
+    colors: [9]Rgb,
+    indices: [3*2*6]usize, // 3 index per triangle, 2 triangle per face, 6 faces
+
     fn init(self: *RenderableCube, cube: Cube) void {
-        self.va = gl.genVertexArrays(1, &va);
+        self.va = gl.genVertexArrays(1, &self.va);
 
-    }
-    fn calcVertex(self: *Renderable, cube: Cube) void {
 
+        const scale_trans = Mat4.fromScale(Vec3.set(cube.size)).translate(cube.pos);
+        // used 0.5 beacuse this way the len of the edge is 1
+        const base_vert_pos: [8]Vec4 = .{
+                               Vec4.new(-0.5, -0.5,  0.5, 1),
+                               Vec4.new( 0.5, -0.5,  0.5, 1),
+                               Vec4.new(-0.5,  0.5,  0.5, 1),
+                               Vec4.new( 0.5,  0.5,  0.5, 1),
+                               Vec4.new(-0.5, -0.5, -0.5, 1),
+                               Vec4.new( 0.5, -0.5, -0.5, 1),
+                               Vec4.new(-0.5,  0.5, -0.5, 1),
+                               Vec4.new( 0.5,  0.5, -0.5, 1),
+        };
+        for (base_vert_pos, 0..) |vertex, i| {
+            self.vert_pos[i] = scale_trans.mulByVec4(vertex);
+        }
+
+        self.colors = .{cube.color} ** 9;
+
+        // 3 index per triangle, 2 triangle per face, 6 faces
+        self.indices_triangles = .{
+               0, 1, 2, 2, 1, 3,  // front
+               5, 4, 7, 7, 4, 6,  // back
+               4, 0, 6, 6, 0, 2,  // left
+               1, 5, 3, 3, 5, 7,  // right
+               2, 3, 6, 6, 3, 7,  // top
+               4, 5, 0, 0, 5, 1,  // bottom
+        };
     }
-}
+};
 
 
 
