@@ -2,75 +2,24 @@ const std = @import("std");
 const glfw = @import("zglfw");
 const zopengl = @import("zopengl");
 const za = @import("zalgebra");
+const shapes = @import("shapes.zig");
+const Shader = @import("shader.zig");
+
+const Cube = shapes.Cube;
+const RenCube = shapes.RenderableCube;
 
 const gl = zopengl.bindings;
 const uint = gl.Uint;
 const int = gl.Int;
+const Mat3 = za.Mat3;
 const Mat4 = za.Mat4;
 const Vec3 = za.Vec3;
 const Vec4 = za.Vec4;
-
 
 const gl_version_major = 4;
 const gl_version_minor = 1;
 const sugg_width = 640;
 const sugg_height = 480;
-
-var g_proj_loc: int = -1;
-
-const Rgb = struct {
-    r: u8,
-    g: u8,
-    b: u8,
-};
-
-const Cube = struct {
-    pos: Vec3 = Vec3.set(0),
-    size: f32 = 1,
-    color: Rgb = .{0, 0, 0},
-};
-
-const RenderableCube = struct {
-    va: uint = undefined,
-    vert_pos: [8]Vec4 = undefined,
-    colors: [9]Rgb,
-    indices: [3*2*6]usize, // 3 index per triangle, 2 triangle per face, 6 faces
-
-    fn init(self: *RenderableCube, cube: Cube) void {
-        self.va = gl.genVertexArrays(1, &self.va);
-
-
-        const scale_trans = Mat4.fromScale(Vec3.set(cube.size)).translate(cube.pos);
-        // used 0.5 beacuse this way the len of the edge is 1
-        const base_vert_pos: [8]Vec4 = .{
-                               Vec4.new(-0.5, -0.5,  0.5, 1),
-                               Vec4.new( 0.5, -0.5,  0.5, 1),
-                               Vec4.new(-0.5,  0.5,  0.5, 1),
-                               Vec4.new( 0.5,  0.5,  0.5, 1),
-                               Vec4.new(-0.5, -0.5, -0.5, 1),
-                               Vec4.new( 0.5, -0.5, -0.5, 1),
-                               Vec4.new(-0.5,  0.5, -0.5, 1),
-                               Vec4.new( 0.5,  0.5, -0.5, 1),
-        };
-        for (base_vert_pos, 0..) |vertex, i| {
-            self.vert_pos[i] = scale_trans.mulByVec4(vertex);
-        }
-
-        self.colors = .{cube.color} ** 9;
-
-        // 3 index per triangle, 2 triangle per face, 6 faces
-        self.indices_triangles = .{
-               0, 1, 2, 2, 1, 3,  // front
-               5, 4, 7, 7, 4, 6,  // back
-               4, 0, 6, 6, 0, 2,  // left
-               1, 5, 3, 3, 5, 7,  // right
-               2, 3, 6, 6, 3, 7,  // top
-               4, 5, 0, 0, 5, 1,  // bottom
-        };
-    }
-};
-
-
 
 pub fn main() !void {
     try glfw.init();
@@ -95,72 +44,22 @@ pub fn main() !void {
     const fb = window.getFramebufferSize();
     gl.viewport(0, 0, fb[0], fb[1]);
 
-    // VBA
-    var va: uint = undefined;
-    gl.genVertexArrays(1, &va);
-    gl.bindVertexArray(va);
+    // Shader
+    const shader = try Shader.new("basic.vert", "basic.frag");
+    shader.use();
 
-    const position_attib_index: uint = 0;
-    gl.enableVertexAttribArray(position_attib_index);
+    var cube: Cube = .{};
+    cube.pos = Vec3.new(0, 0, 0);
 
-    const color_attrib_index = 1;
-    gl.enableVertexAttribArray(color_attrib_index);
-
-    // VBO
-    const positions_and_colors = [_]f32 {
-    // Positions are given in world coordinates
-    //    x    y   r    g    b
-        -50, -50, 1.0, 0.0, 0.0,
-         50, -50, 0.0, 1.0, 0.0,
-         50,  50, 0.0, 0.0, 1.0,
-        -50,  50, 1.0, 1.0, 1.0,
-    };
-
-    var pos_col_buff: uint = undefined;
-    gl.genBuffers(1, &pos_col_buff);
-    gl.bindBuffer(gl.ARRAY_BUFFER, pos_col_buff);
-
-    gl.bufferData(gl.ARRAY_BUFFER, @sizeOf(@TypeOf(positions_and_colors)), &positions_and_colors, gl.STATIC_DRAW);
-
-    gl.vertexAttribPointer(position_attib_index, 2, gl.FLOAT, gl.FALSE, @sizeOf(f32)*5, @ptrFromInt(0));
-    gl.vertexAttribPointer(color_attrib_index, 3, gl.FLOAT, gl.FALSE, @sizeOf(f32)*5, @ptrFromInt(@sizeOf(f32) * 2));
-
-    // EBO
-    const indices = [_]uint{0, 1, 2, 0, 2, 3};
-    var index_buffer: uint = undefined;
-
-    gl.genBuffers(1, &index_buffer);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
-    gl.bufferData(
-        gl.ELEMENT_ARRAY_BUFFER,
-        @sizeOf(@TypeOf(indices)),
-        &indices,
-        gl.STATIC_DRAW
-    );
-
-    // Shaders set-up
-    const vs = setShader(gl.VERTEX_SHADER, "basic.vert");
-    const fs = setShader(gl.FRAGMENT_SHADER, "basic.frag");
-
-    const ps = gl.createProgram();
-    gl.attachShader(ps, vs);
-    gl.attachShader(ps, fs);
-
-    gl.linkProgram(ps);
-
-    gl.useProgram(ps);
-
-    const proj = ortho(-sugg_width/2, sugg_width/2, sugg_height/2, -sugg_height/2);
-    // Link Projection martix to the shader
-    g_proj_loc = gl.getUniformLocation(ps, "uProj");
-    gl.uniformMatrix4fv(g_proj_loc, 1, gl.FALSE, &proj);
+    var rc = RenCube.new(cube);
 
     gl.clearColor(0.2, 0.2, 0.2, 1);
     while (!glfw.windowShouldClose(window)) {
 
         gl.clear(gl.COLOR_BUFFER_BIT);
 
-        gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, null);
+        // gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, null);
+        rc.draw();
 
         window.swapBuffers();
 
@@ -169,45 +68,8 @@ pub fn main() !void {
 
 }
 
-fn setShader(comptime shader_type: uint, comptime path: []const u8) uint {
-    // “Treat this pointer-to-array as a C pointer to its first byte.”
-    const shader_ptr: [*c] const u8 = @ptrCast(@embedFile(path));
-    // “Create an array of C string pointers, because OpenGL expects char**.”
-    const shader_ptr_array = [_][*c]const u8{ shader_ptr };
-
-    const shader: uint = gl.createShader(shader_type);
-    //                    ⬐pointer to the first element of an array of C string pointers
-    gl.shaderSource(shader, 1, &shader_ptr_array, null);
-    gl.compileShader(shader);
-
-    return shader;
-}
-
 fn framebuffer_size_callback(window: *glfw.Window, fb_w: c_int, fb_h: c_int) callconv(.c) void {
     _ = window;
-
-    gl.viewport(0, 0, fb_w, fb_h);
-
-    const aspect = @as(f32, @floatFromInt(fb_w)) / @as(f32, @floatFromInt(fb_h));
-    const world_h: f32 = sugg_height;
-    const world_w: f32 = world_h * aspect;
-
-    const proj = ortho(-world_w/2, world_w/2, world_h/2, -world_h/2);
-    gl.uniformMatrix4fv(g_proj_loc, 1, gl.FALSE, &proj);
-}
-
-fn ortho(l: f32, r: f32, t: f32, b: f32) [16]f32 {
-    // s -> scale
-    const sx = 2.0 / (r-l);
-    const sy = 2.0 / (t-b);
-    // t -> translate
-    const tx = -(r+l) / (r-l);
-    const ty = -(t+b) / (t-b);
-
-    return .{
-        sx,  0,  0,  0,
-         0, sy,  0,  0,
-         0,  0, -1,  0,
-        tx, ty,  0,  1,
-    };
+    _ = fb_w;
+    _ = fb_h;
 }
