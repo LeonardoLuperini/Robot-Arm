@@ -18,8 +18,9 @@ const Vec4 = za.Vec4;
 
 const gl_version_major = 4;
 const gl_version_minor = 1;
-const sugg_width = 640;
-const sugg_height = 480;
+const sugg_width: comptime_float = 1920;
+const sugg_height: comptime_float = 1080;
+const aspect: comptime_float = sugg_width/sugg_height;
 
 pub fn main() !void {
     try glfw.init();
@@ -48,10 +49,17 @@ pub fn main() !void {
     const shader = try Shader.new("basic.vert", "basic.frag");
     shader.use();
 
-    var cube: Cube = .{};
-    cube.pos = Vec3.new(0, 0, 0);
+    const cube: Cube = .{
+        .pos = Vec3.new(0, -10, -25),
+        .size = 5
+
+    };
 
     var rc = RenCube.new(cube);
+
+    const projection = za.perspective(60, aspect, 10, 50);
+    const uProj = gl.getUniformLocation(shader.program, "uProj");
+    gl.uniformMatrix4fv(uProj, 1, gl.FALSE, &projection.data[0]);
 
     gl.clearColor(0.2, 0.2, 0.2, 1);
     while (!glfw.windowShouldClose(window)) {
