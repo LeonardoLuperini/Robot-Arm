@@ -2,8 +2,6 @@ const std = @import("std");
 const zopengl = @import("zopengl");
 
 const gl = zopengl.bindings;
-const uint = c_uint;
-const int = c_int;
 const allocator = std.heap.c_allocator;
 
 const ShaderError = error{
@@ -14,7 +12,7 @@ const ShaderError = error{
     ProgramLinkFailed,
 };
 
-program: uint,
+program: c_uint,
 
 pub fn new(comptime vert_path: []const u8, comptime frag_path: []const u8) ShaderError!@This() {
     const vs = try compileShader(gl.VERTEX_SHADER, vert_path);
@@ -53,13 +51,13 @@ pub fn deinit(self: *@This()) void {
     }
 }
 
-fn compileShader(comptime shader_type: uint, comptime path: []const u8) ShaderError!uint {
+fn compileShader(comptime shader_type: c_uint, comptime path: []const u8) ShaderError!c_uint {
     // “Treat this pointer-to-array as a C pointer, (aka potinter to its first byte).”
     const shader_ptr: [*c]const u8 = @ptrCast(@embedFile(path));
     // “Create an array of C string pointers, because OpenGL expects char**.”
     const shader_ptr_array = [_][*c]const u8{ shader_ptr };
 
-    const shader: uint = gl.createShader(shader_type);
+    const shader: c_uint = gl.createShader(shader_type);
     if (shader == 0) return ShaderError.ShaderCreationFailed;
     errdefer gl.deleteShader(shader);
 
@@ -72,8 +70,8 @@ fn compileShader(comptime shader_type: uint, comptime path: []const u8) ShaderEr
     return shader;
 }
 
-fn checkShaderCompile(shader: uint, comptime path: []const u8) ShaderError!void {
-    var compiled: int = undefined;
+fn checkShaderCompile(shader: c_uint, comptime path: []const u8) ShaderError!void {
+    var compiled: c_int = undefined;
     gl.getShaderiv(shader, gl.COMPILE_STATUS, &compiled);
 
     if (compiled == gl.TRUE) return;
@@ -82,8 +80,8 @@ fn checkShaderCompile(shader: uint, comptime path: []const u8) ShaderError!void 
     return ShaderError.ShaderCompilationFailed;
 }
 
-fn checkProgramLink(program: uint) !void {
-    var linked: int = undefined;
+fn checkProgramLink(program: c_uint) !void {
+    var linked: c_int = undefined;
     gl.getProgramiv(program, gl.LINK_STATUS, &linked);
 
     if (linked == gl.TRUE) return;
@@ -92,8 +90,8 @@ fn checkProgramLink(program: uint) !void {
     return ShaderError.ProgramLinkFailed;
 }
 
-fn logProgramValidation(program: uint) void {
-    var valid: int = undefined;
+fn logProgramValidation(program: c_uint) void {
+    var valid: c_int = undefined;
     gl.getProgramiv(program, gl.VALIDATE_STATUS, &valid);
 
     if (valid == gl.TRUE) return;
@@ -101,8 +99,8 @@ fn logProgramValidation(program: uint) void {
     printProgramInfoLog(program, "Program validation failed (not always fatal)");
 }
 
-fn printShaderInfoLog(shader: uint, comptime path: []const u8) void {
-    var log_len: int = 0;
+fn printShaderInfoLog(shader: c_uint, comptime path: []const u8) void {
+    var log_len: c_int = 0;
     gl.getShaderiv(shader, gl.INFO_LOG_LENGTH, &log_len);
 
     if (log_len <= 1) {
@@ -128,7 +126,7 @@ fn printShaderInfoLog(shader: uint, comptime path: []const u8) void {
     };
     defer allocator.free(log);
 
-    var written: int = 0;
+    var written: c_int = 0;
     gl.getShaderInfoLog(shader, log_len, &written, log.ptr);
 
     std.debug.print(
@@ -140,8 +138,8 @@ fn printShaderInfoLog(shader: uint, comptime path: []const u8) void {
     , .{ path, log[0..@intCast(written)] });
 }
 
-fn printProgramInfoLog(program: uint, comptime header: []const u8) void {
-    var log_len: int = 0;
+fn printProgramInfoLog(program: c_uint, comptime header: []const u8) void {
+    var log_len: c_int = 0;
     gl.getProgramiv(program, gl.INFO_LOG_LENGTH, &log_len);
 
     if (log_len <= 1) {
@@ -167,7 +165,7 @@ fn printProgramInfoLog(program: uint, comptime header: []const u8) void {
     };
     defer allocator.free(log);
 
-    var written: int = 0;
+    var written: c_int = 0;
     gl.getProgramInfoLog(program, log_len, &written, log.ptr);
 
     std.debug.print(

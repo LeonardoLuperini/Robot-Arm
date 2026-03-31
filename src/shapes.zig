@@ -3,8 +3,7 @@ const zopengl = @import("zopengl");
 const za = @import("zalgebra");
 
 const gl = zopengl.bindings;
-const uint = gl.Uint;
-const int = gl.Int;
+
 const Mat3 = za.Mat3;
 const Mat4 = za.Mat4;
 const Vec3 = za.Vec3;
@@ -34,7 +33,7 @@ pub const RenderableCube = struct {
     // 3 index per triangle, 2 triangle per face, 6 faces
     const n_of_indices: comptime_int = 3*2*6;
 
-    vao: uint,
+    vao: c_uint,
 
     pub fn new(cube: Cube) RenderableCube {
         var rc: RenderableCube = .{
@@ -61,11 +60,11 @@ pub const RenderableCube = struct {
 
 
     fn setIndices() void {
-        var index_buffer: uint = undefined;
+        var index_buffer: c_uint = undefined;
         gl.genBuffers(1, &index_buffer);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
 
-        const indices: [n_of_indices]uint = .{
+        const indices: [n_of_indices]c_uint = .{
                0, 1, 2, 2, 1, 3,  // front
                5, 4, 7, 7, 4, 6,  // back
                4, 0, 6, 6, 0, 2,  // left
@@ -78,17 +77,17 @@ pub const RenderableCube = struct {
 
 
     fn setVertexData(vertices: [stride * n_of_verices]f32) void {
-        var vbo: uint = undefined;
+        var vbo: c_uint = undefined;
         gl.genBuffers(1, &vbo);
         gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
 
         gl.bufferData(gl.ARRAY_BUFFER, @sizeOf(@TypeOf(vertices)), &vertices, gl.STATIC_DRAW);
 
-        const pos_index: uint = 0;
+        const pos_index: c_uint = 0;
         gl.enableVertexAttribArray(pos_index);
         gl.vertexAttribPointer(pos_index, 3, gl.FLOAT, gl.FALSE, @sizeOf(f32) * stride, @ptrFromInt(0));
 
-        const color_index: uint = 1;
+        const color_index: c_uint = 1;
         gl.enableVertexAttribArray(color_index);
         gl.vertexAttribPointer(color_index, 3, gl.FLOAT, gl.FALSE, @sizeOf(f32) * stride, @ptrFromInt(@sizeOf(f32) * 3));
     }
